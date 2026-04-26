@@ -1,217 +1,140 @@
-# 📋 Rapport d’Analyse Statique — OWASP UnCrackable Level 1
+# 📋 Rapport d’analyse de sécurité Android — Lab 2 (Rooting)
 
-**Date :** 26 Avril 2026
-**Analyste :** AMAR SAAD
-**Contexte :** Rooting Android
-
----
-
-# A. Informations générales
-
-| Champ            | Détail                                                           |
-| ---------------- | ---------------------------------------------------------------- |
-| Application      | UnCrackable Level 1                                              |
-| Version          | v1.0 (code 1)                                                    |
-| Package          | owasp.mstg.uncrackable1                                          |
-| SDK min / target | API 19 / API 28                                                  |
-| Origine          | APK pédagogique OWASP MAS Crackmes                               |
-| Hash SHA-256     | 1DA8BF57D266109F9A07C01BF7111A1975CE01F190B9D914BCD3AE3DBEF96F21 |
-| Outils           | JADX GUI, dex2jar, JD-GUI                                        |
+**Date :** 25 Avril 2026
+**Auteur :** AMAR SAAD
+**Environnement :** AVD Pixel 3 XL (Android 9.0 – API 28)
+**Application cible :** pizza.apk
 
 ---
 
-# B. Résumé global
+## 🧭 1. Contexte de l’étude
 
-L’étude statique de l’application **UnCrackable Level 1** a permis d’identifier plusieurs problèmes de sécurité liés principalement à :
+Ce laboratoire porte sur l’analyse du rooting Android et son impact sur la sécurité des applications mobiles.
+L’objectif est de comprendre comment l’élévation de privilèges (root) influence la protection du système et la visibilité des données internes d’une application.
 
-* une implémentation cryptographique faible,
-* une logique de validation exposée côté client,
-* et des mécanismes de protection anti-root facilement contournables.
-
-Ces éléments rendent l’application vulnérable à une analyse et une manipulation via des outils de reverse engineering.
-
-### 📊 Niveau de risque global : **ÉLEVÉ 🔴**
-
-### 🎯 Recommandations prioritaires :
-
-* Abandon du mode AES/ECB au profit de AES/GCM
-* Externalisation de la vérification du secret côté serveur
-* Adoption de Play Integrity API pour les contrôles d’environnement
+L’ensemble des tests a été effectué dans un environnement isolé afin d’éviter toute interaction avec un système réel.
 
 ---
 
-# C. Analyse des vulnérabilités
+## 🔐 2. Compréhension du rooting Android
+
+Le rooting correspond à l’obtention des droits administrateur sur un appareil Android.
+Cela permet un accès complet au système, incluant les fichiers protégés, les configurations internes et les processus système.
+
+Dans un contexte d’analyse sécurité, cela permet :
+
+* d’examiner le comportement réel des applications,
+* d’accéder aux zones normalement protégées,
+* d’analyser les mécanismes de sécurité internes.
+
+Cependant, ce niveau d’accès casse les protections natives d’Android et doit être utilisé uniquement dans un cadre de test contrôlé.
 
 ---
 
-## 🔴 Constat 1 — Chiffrement AES en mode ECB
+## 🔗 3. Mécanisme de sécurité Android (chaîne de confiance)
 
-| Élément      | Détail                                          |
-| ------------ | ----------------------------------------------- |
-| Gravité      | Élevée                                          |
-| Problème     | Utilisation d’AES en mode ECB sans IV           |
-| Impact       | Répétition de motifs dans les données chiffrées |
-| Localisation | classe cryptographique interne                  |
+Android repose sur un mécanisme de validation en plusieurs étapes garantissant l’intégrité du système :
 
-### 📌 Analyse
-
-Le mode ECB applique un chiffrement déterministe, ce qui signifie qu’un même message produit toujours le même résultat. Cela facilite grandement l’analyse cryptographique.
-
-### 🛠️ Correction recommandée
-
-* Utiliser **AES/GCM/NoPadding**
-* Ajouter un IV généré aléatoirement
-
-```java id="aes_fix"
-Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+```text id="x8c0lm"
+Matériel sécurisé (Root of Trust)
+        ↓
+Bootloader
+        ↓
+Kernel (partition boot)
+        ↓
+Système Android
 ```
 
----
+Chaque étape vérifie la signature de la suivante afin d’empêcher toute modification non autorisée.
 
-## 🔴 Constat 2 — Validation côté client
+### 🔒 Android Verified Boot (AVB)
 
-| Élément  | Détail                                     |
-| -------- | ------------------------------------------ |
-| Gravité  | Élevée                                     |
-| Problème | Secret vérifié localement dans l’APK       |
-| Impact   | Extraction directe via reverse engineering |
+AVB ajoute une couche de sécurité supplémentaire :
 
-### 📌 Analyse
-
-La logique de validation étant embarquée dans l’application, elle peut être facilement reconstruite sans exécution.
-
-### 🛠️ Correction recommandée
-
-* Déplacer la vérification vers un **serveur sécurisé**
-* Utiliser une API HTTPS avec authentification
+* vérification cryptographique des partitions,
+* protection contre les versions modifiées,
+* blocage du downgrade (anti-rollback).
 
 ---
 
-## 🟡 Constat 3 — Détection de root contournable
+## ⚠️ 4. Analyse des risques identifiés
 
-| Élément  | Détail                                 |
-| -------- | -------------------------------------- |
-| Gravité  | Moyenne                                |
-| Problème | Détection basée sur fichiers système   |
-| Impact   | Facilement bypass avec instrumentation |
+Lors de l’étude du contexte rooté, plusieurs risques ont été identifiés :
 
-### 📌 Analyse
+### 🔴 Risques critiques
 
-L’application vérifie la présence de certains fichiers liés au root. Ces contrôles sont statiques et donc contournables.
+* perte d’intégrité du système d’analyse,
+* exposition possible de données sensibles,
+* résultats non représentatifs d’un environnement réel.
 
-### 📌 Fichiers surveillés :
+### 🟠 Risques moyens
 
-```
-/system/app/Superuser.apk
-/system/xbin/daemonsu
-/system/etc/init.d/99SuperSUDaemon
-/system/bin/.ext/.su
-/dev/com.koushikdutta.superuser.daemon/
-```
+* augmentation de la surface d’attaque,
+* contournement des protections applicatives,
+* accès facilité aux fichiers internes.
 
-### 🛠️ Amélioration
+### 🟢 Mesures de sécurité appliquées
 
-* Utiliser **Play Integrity API**
-* Ajouter vérification serveur
+* utilisation exclusive de données fictives,
+* environnement totalement isolé,
+* suppression des comptes personnels,
+* réinitialisation de l’émulateur après test,
+* restriction des applications installées.
 
 ---
 
-## 🟡 Constat 4 — Backup activé
+## 📚 5. Référentiels de sécurité utilisés
 
-| Élément  | Détail                         |
-| -------- | ------------------------------ |
-| Gravité  | Moyenne                        |
-| Problème | allowBackup = true             |
-| Impact   | Extraction des données via ADB |
+### OWASP MASVS
 
-### 🛠️ Correction
+* **STORAGE-1 :** les données sensibles doivent être chiffrées et jamais stockées en clair.
+* **NETWORK-1 :** toutes les communications doivent utiliser TLS avec validation stricte.
 
-```xml id="backup_fix"
-android:allowBackup="false"
-```
+### OWASP MASTG
+
+* inspection des fichiers internes via accès root (`/data/data/...`)
+* surveillance des logs via `adb logcat` pour détecter des fuites d’informations
 
 ---
 
-## 🟢 Constat 5 — Version SDK obsolète
+## 🧪 6. Résultats des tests
 
-| Élément  | Détail                                        |
-| -------- | --------------------------------------------- |
-| Gravité  | Faible                                        |
-| Problème | minSdk trop ancien (API 19)                   |
-| Impact   | Exposition à vulnérabilités système anciennes |
+L’application a été testée dans plusieurs scénarios :
 
-### 🛠️ Correction
+### ▶️ Démarrage de l’application
 
-* minSdkVersion ≥ 26
-* targetSdkVersion ≥ 34
+L’application Pizza recipes se lance correctement sans détection du root.
 
----
+### ▶️ Navigation dans les recettes
 
-# D. Plan de correction
+Les images et contenus se chargent normalement sans erreur.
 
-| Priorité | Action                               |
-| -------- | ------------------------------------ |
-| 🔴       | Remplacer AES/ECB par AES/GCM        |
-| 🔴       | Externaliser validation côté serveur |
-| 🟡       | Ajouter Play Integrity API           |
-| 🟡       | Désactiver backup Android            |
-| 🟢       | Mettre à jour SDK                    |
+### ▶️ Interaction utilisateur
+
+Les actions (navigation, partage, affichage détail) fonctionnent sans interruption.
+
+👉 Conclusion des tests : aucune protection active contre l’environnement root n’a été détectée.
 
 ---
 
-# E. Analyse technique APK
+## 🖥️ 7. Informations d’environnement
 
-## 🔐 Permissions
-
-Aucune permission sensible déclarée → surface limitée.
-
----
-
-## 📦 Composants
-
-| Composant    | État                |
-| ------------ | ------------------- |
-| MainActivity | Exportée (launcher) |
+* **Android version :** 9.0 (API 28)
+* **Émulateur :** emulator-5554
+* **Statut root :** actif (uid=0)
+* **État Verified Boot :** orange (bootloader déverrouillé)
 
 ---
 
-## 📁 Structure APK
+## 🧹 8. Nettoyage et fin de session
 
-* AndroidManifest.xml
-* classes.dex
-* resources.arsc
-* res/layout
-* META-INF (signature)
+À la fin du laboratoire :
 
----
-
-# F. Comparaison outils
-
-| Critère              | JADX | JD-GUI  |
-| -------------------- | ---- | ------- |
-| XML Android          | ✔    | ✖       |
-| Lisibilité code      | ✔    | Moyen   |
-| Analyse complète APK | ✔    | Limitée |
-<img width="453" height="37" alt="image" src="https://github.com/user-attachments/assets/820ceb58-d13c-428e-9d51-7f52f740cd32" />
-<img width="605" height="49" alt="image" src="https://github.com/user-attachments/assets/e9376e71-3f6c-4371-ba6a-51f14b10092c" />
-<img width="596" height="76" alt="image" src="https://github.com/user-attachments/assets/60b18914-a8cd-4014-95f5-91bf645bd37e" />
-<img width="770" height="47" alt="image" src="https://github.com/user-attachments/assets/e14bb870-c769-42f4-aaff-764d62593e77" />
+* suppression des données de test,
+* reset complet de l’émulateur (wipe),
+* absence de comptes personnels,
+* sauvegarde des logs et captures pour documentation.
 
 ---
+<img width="1723" height="645" alt="image" src="https://github.com/user-attachments/assets/04e1e12b-7b37-4792-9c7d-002807b68a8f" />
 
-# ⚠️ Conclusion
-
-L’application étudiée présente des faiblesses classiques des applications pédagogiques en sécurité mobile :
-
-* cryptographie faible,
-* logique client exposée,
-* protections anti-root basiques.
-
-Ces éléments en font un excellent support pour apprendre les techniques de reverse engineering et d’analyse statique.
-
----
-
-# ⚠️ Note finale
-
-Analyse réalisée dans un cadre **strictement académique et contrôlé (OWASP MAS Crackmes)**.
-Aucune exploitation malveillante n’a été effectuée.
