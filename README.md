@@ -124,16 +124,6 @@ Les actions (navigation, partage, affichage détail) fonctionnent sans interrupt
 * **Statut root :** actif (uid=0)
 * **État Verified Boot :** orange (bootloader déverrouillé)
 
----
-
-## 🧹 8. Nettoyage et fin de session
-
-À la fin du laboratoire :
-
-* suppression des données de test,
-* reset complet de l’émulateur (wipe),
-* absence de comptes personnels,
-* sauvegarde des logs et captures pour documentation.
 
 ---
 <img width="1723" height="645" alt="image" src="https://github.com/user-attachments/assets/04e1e12b-7b37-4792-9c7d-002807b68a8f" />
