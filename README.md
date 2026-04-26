@@ -1,8 +1,11 @@
 # 📋 Rapport d’analyse de sécurité Android — Lab 2 (Rooting)
 
 **Date :** 25 Avril 2026
+
 **Auteur :** AMAR SAAD
+
 **Environnement :** AVD Pixel 3 XL (Android 9.0 – API 28)
+
 **Application cible :** pizza.apk
 
 ---
